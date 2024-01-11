@@ -28,7 +28,7 @@ static unsigned int CompileShader(const std::string& source, unsigned int type)
 	return id;
 }
 
-static int CreateShader(const std::string& vertexShader, const std::string& fragmentShader)
+static unsigned int CreateShader(const std::string& vertexShader, const std::string& fragmentShader)
 {
 	unsigned int program = glCreateProgram();
     unsigned int vs = CompileShader(vertexShader, GL_VERTEX_SHADER);
@@ -51,7 +51,6 @@ int main(void)
     /* Initialize the library */
     if (!glfwInit())
         return -1;
-
 
    
     /* Create a windowed mode window and its OpenGL context */
@@ -86,6 +85,27 @@ int main(void)
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0);
 
+    std::string vertexShader = 
+		"#version 330 core\n"
+		"\n"
+		"layout(location = 0) in vec4 position;\n"
+		"\n"
+		"void main()\n"
+		"{\n"
+		"   gl_Position = position;\n"
+		"}\n";
+
+    std::string fragmentShader = 
+        "#version 330 core\n"
+        "layout(location = 0) out vec4 color;\n"
+        "void main()\n"
+        "{\n"
+        "   color = vec4(1.0, 0.0, 0.0, 1.0);\n"
+        "}\n";
+
+
+    unsigned int shader = CreateShader(vertexShader, fragmentShader);
+    glUseProgram(shader);
 
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window)){
