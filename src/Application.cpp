@@ -5,6 +5,27 @@
 #include<string>
 #include<sstream>
 
+//c++ macro, compiler intrinsic function
+#define ASSERT(x) if (!(x)) __debugbreak();
+#define GlCall(x) GLClearError();\
+	x;\
+	ASSERT(GLLogCall());
+
+static void GLClearError()
+{
+	while (glGetError() != GL_NO_ERROR);
+}
+
+static bool GLLogCall()
+{
+    while (GLenum error = glGetError())
+    {
+		std::cout << "[OpenGL Error] (" << error << ")" << std::endl;
+        return false;
+	}
+	return true;
+}
+
 struct ShaderProgramSource
 {
 	std::string VertexSource;
@@ -155,7 +176,10 @@ int main(void)
     while (!glfwWindowShouldClose(window)){
 
         glClear(GL_COLOR_BUFFER_BIT);
-        glDrawElements(GL_TRIANGLES, 6, GL_INT, nullptr);
+
+
+        GlCall(glDrawElements(GL_TRIANGLES, 6, GL_INT, nullptr));
+
         /* Swap front and back buffers */
         glfwSwapBuffers(window);
         /* Poll for and process events */
