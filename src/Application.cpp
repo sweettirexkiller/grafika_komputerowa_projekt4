@@ -9,18 +9,18 @@
 #define ASSERT(x) if (!(x)) __debugbreak();
 #define GlCall(x) GLClearError();\
 	x;\
-	ASSERT(GLLogCall());
+	ASSERT(GLLogCall(#x, __FILE__, __LINE__));
 
 static void GLClearError()
 {
 	while (glGetError() != GL_NO_ERROR);
 }
 
-static bool GLLogCall()
+static bool GLLogCall(const char* function, const char* file, int line)
 {
     while (GLenum error = glGetError())
     {
-		std::cout << "[OpenGL Error] (" << error << ")" << std::endl;
+		std::cout << "[OpenGL Error] (" << error << "): " << function <<  " " << file << ":" << line << std::endl;
         return false;
 	}
 	return true;
@@ -70,22 +70,22 @@ static unsigned int CompileShader(const std::string& source, unsigned int type)
 {
 	unsigned int id = glCreateShader(type);
 	const char* src = source.c_str();
-	glShaderSource(id, 1, &src, nullptr);
-	glCompileShader(id);
+	GlCall(glShaderSource(id, 1, &src, nullptr));
+	GlCall(glCompileShader(id));
 
 	// Error handling
 	int result;
-	glGetShaderiv(id, GL_COMPILE_STATUS, &result);
+	GlCall(glGetShaderiv(id, GL_COMPILE_STATUS, &result));
     if (result == GL_FALSE)
     {
 		int length;
-		glGetShaderiv(id, GL_INFO_LOG_LENGTH, &length);
+		GlCall(glGetShaderiv(id, GL_INFO_LOG_LENGTH, &length));
 		// alloca is a stack memory allocation
 		char* message = (char*)alloca(length * sizeof(char));
-		glGetShaderInfoLog(id, length, &length, message);
+		GlCall(glGetShaderInfoLog(id, length, &length, message));
 		std::cout << "Failed to compile shader!" << std::endl;
 		std::cout << message << std::endl;
-		glDeleteShader(id);
+		GlCall(glDeleteShader(id));
 		return 0;
 	}
 
@@ -94,16 +94,16 @@ static unsigned int CompileShader(const std::string& source, unsigned int type)
 
 static unsigned int CreateShader(const std::string& vertexShader, const std::string& fragmentShader)
 {
-	unsigned int program = glCreateProgram();
-    unsigned int vs = CompileShader(vertexShader, GL_VERTEX_SHADER);
-    unsigned int fs = CompileShader(fragmentShader, GL_FRAGMENT_SHADER);
-	glAttachShader(program, vs);
-	glAttachShader(program, fs);
-	glLinkProgram(program);
-	glValidateProgram(program);
+	GlCall(unsigned int program = glCreateProgram());
+    GlCall(unsigned int vs = CompileShader(vertexShader, GL_VERTEX_SHADER));
+    GlCall(unsigned int fs = CompileShader(fragmentShader, GL_FRAGMENT_SHADER));
+	GlCall(glAttachShader(program, vs));
+    GlCall(glAttachShader(program, fs));
+    GlCall(glLinkProgram(program));
+    GlCall(glValidateProgram(program));
     // Delete the intermediate shader objects
-	glDeleteShader(vs);
-	glDeleteShader(fs);
+    GlCall(glDeleteShader(vs));
+    GlCall(glDeleteShader(fs));
 	return program;
 }
 
@@ -151,17 +151,17 @@ int main(void)
     };
 
     unsigned int buffer;
-    glGenBuffers(1, &buffer);
-    glBindBuffer(GL_ARRAY_BUFFER, buffer);
-    glBufferData(GL_ARRAY_BUFFER, 6*2 * sizeof(float), positions, GL_STATIC_DRAW);
+    GlCall(glGenBuffers(1, &buffer));
+    GlCall(glBindBuffer(GL_ARRAY_BUFFER, buffer));
+    GlCall(glBufferData(GL_ARRAY_BUFFER, 6*2 * sizeof(float), positions, GL_STATIC_DRAW));
 
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0,  2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0);
+    GlCall(glEnableVertexAttribArray(0));
+    GlCall(glVertexAttribPointer(0,  2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0));
 
     unsigned int ibo;
-    glGenBuffers(1, &ibo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned int), indices, GL_STATIC_DRAW);
+    GlCall(glGenBuffers(1, &ibo));
+    GlCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo));
+    GlCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned int), indices, GL_STATIC_DRAW));
 
     ShaderProgramSource source = ParseShader("res/shaders/Basic.shader");
     std::cout << "VERTEX" << std::endl;
@@ -175,18 +175,17 @@ int main(void)
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window)){
 
-        glClear(GL_COLOR_BUFFER_BIT);
+        GlCall(glClear(GL_COLOR_BUFFER_BIT));
 
-
-        GlCall(glDrawElements(GL_TRIANGLES, 6, GL_INT, nullptr));
+        GlCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));
 
         /* Swap front and back buffers */
-        glfwSwapBuffers(window);
+        GlCall(glfwSwapBuffers(window));
         /* Poll for and process events */
-        glfwPollEvents();
+        GlCall(glfwPollEvents());
     }
 
-    glDeleteProgram(shader);
+    GlCall(glDeleteProgram(shader));
 
     glfwTerminate();
     return 0;
