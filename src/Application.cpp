@@ -4,28 +4,12 @@
 #include<fstream>
 #include<string>
 #include<sstream>
+#include "Renderer.h"
+#include "VertexBuffer.h"
+#include "IndexBuffer.h"
 
-//c++ macro, compiler intrinsic function
-#define ASSERT(x) if (!(x)) __debugbreak();
-#define GlCall(x) GLClearError();\
-	x;\
-	ASSERT(GLLogCall(#x, __FILE__, __LINE__));
 
-static void GLClearError()
-{
-	while (glGetError() != GL_NO_ERROR);
-}
-
-static bool GLLogCall(const char* function, const char* file, int line)
-{
-    while (GLenum error = glGetError())
-    {
-		std::cout << "[OpenGL Error] (" << error << "): " << function <<  " " << file << ":" << line << std::endl;
-        return false;
-	}
-	return true;
-}
-
+// struct for shader source code
 struct ShaderProgramSource
 {
 	std::string VertexSource;
@@ -163,35 +147,22 @@ int main(void)
     GlCall(glGenVertexArrays(1, &vao));
     GlCall(glBindVertexArray(vao));
 
-
     // Vertex Buffer Object
-    unsigned int buffer;
-    GlCall(glGenBuffers(1, &buffer));
-    GlCall(glBindBuffer(GL_ARRAY_BUFFER, buffer));
-    GlCall(glBufferData(GL_ARRAY_BUFFER, 4*2 * sizeof(float), positions, GL_STATIC_DRAW));
-
+    VertexBuffer vb(positions, 4 * 2 * sizeof(float));
 
     GlCall(glEnableVertexAttribArray(0));
     // thil links the buffer to the vao
     GlCall(glVertexAttribPointer(0,  2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0));
 
     // Index Buffer Object
-    unsigned int ibo;
-    GlCall(glGenBuffers(1, &ibo));
-    GlCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo));
-    GlCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned int), indices, GL_STATIC_DRAW));
+    IndexBuffer ib(indices, 6);
 
     // parcing shader code
     ShaderProgramSource source = ParseShader("res/shaders/Basic.shader");
-    std::cout << "VERTEX" << std::endl;
-    std::cout << source.VertexSource << std::endl;
-    std::cout << "FRAGMENT" << std::endl;
-    std::cout << source.FragmentSource << std::endl;
 
     // creating shader
     unsigned int shader = CreateShader(source.VertexSource, source.FragmentSource);
     GlCall(glUseProgram(shader));
-
 
     // addint uniform to shader, this is how we can change the color
     // location is the location of the uniform value in the shader
@@ -201,6 +172,7 @@ int main(void)
     
     
     //unbind everything
+    GlCall(glBindVertexArray(0));
     GlCall(glUseProgram(0));
     GlCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
     GlCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
@@ -220,8 +192,8 @@ int main(void)
 
         // bind vao and ibo
         GlCall(glBindVertexArray(vao));
-        GlCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo));
-
+        ib.Bind();
+     
 
         GlCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));
 
