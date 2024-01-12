@@ -128,93 +128,97 @@ int main(void)
 
     /* print opengl version and which driver is used */
     std::cout << glGetString(GL_VERSION) << std::endl;
-
-   
-    float positions[] = {
-		-0.5f, -0.5f,
-		 0.5f, -0.5f,
-		 0.5f, 0.5f, 
-         -0.5f, 0.5f
-	};
-
-    unsigned int indices[] = {
-        0, 1, 2,
-        2, 3, 0
-    };
-
-    // Vertex Array Object
-    unsigned int vao;
-    GlCall(glGenVertexArrays(1, &vao));
-    GlCall(glBindVertexArray(vao));
-
-    // Vertex Buffer Object
-    VertexBuffer vb(positions, 4 * 2 * sizeof(float));
-
-    GlCall(glEnableVertexAttribArray(0));
-    // thil links the buffer to the vao
-    GlCall(glVertexAttribPointer(0,  2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0));
-
-    // Index Buffer Object
-    IndexBuffer ib(indices, 6);
-
-    // parcing shader code
-    ShaderProgramSource source = ParseShader("res/shaders/Basic.shader");
-
-    // creating shader
-    unsigned int shader = CreateShader(source.VertexSource, source.FragmentSource);
-    GlCall(glUseProgram(shader));
-
-    // addint uniform to shader, this is how we can change the color
-    // location is the location of the uniform value in the shader
-    GlCall( int location = glGetUniformLocation(shader, "u_Color"));
-    ASSERT(location != -1);
-    GlCall(glUniform4f(location, 0.8f, 0.3f, 0.8f, 1.0f));
     
     
-    //unbind everything
-    GlCall(glBindVertexArray(0));
-    GlCall(glUseProgram(0));
-    GlCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
-    GlCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
+    
+    {
+        float positions[] = {
+		    -0.5f, -0.5f,
+		     0.5f, -0.5f,
+		     0.5f, 0.5f, 
+             -0.5f, 0.5f
+	    };
 
-    float r = 0.0f;
-    float increment = 0.05f;
+        unsigned int indices[] = {
+            0, 1, 2,
+            2, 3, 0
+        };
 
-    /* Loop until the user closes the window */
-    while (!glfwWindowShouldClose(window)){
-
-        GlCall(glClear(GL_COLOR_BUFFER_BIT));
-
-        // bind shader
-        GlCall(glUseProgram(shader));
-        // change color
-        GlCall(glUniform4f(location, r, 0.3f, 0.8f, 1.0f));
-
-        // bind vao and ibo
+        // Vertex Array Object
+        unsigned int vao;
+        GlCall(glGenVertexArrays(1, &vao));
         GlCall(glBindVertexArray(vao));
-        ib.Bind();
+
+        // Vertex Buffer Object
+        VertexBuffer vb(positions, 4 * 2 * sizeof(float));
+
+        GlCall(glEnableVertexAttribArray(0));
+        // thil links the buffer to the vao
+        GlCall(glVertexAttribPointer(0,  2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0));
+
+        // Index Buffer Object
+        IndexBuffer ib(indices, 6);
+
+        // parcing shader code
+        ShaderProgramSource source = ParseShader("res/shaders/Basic.shader");
+
+        // creating shader
+        unsigned int shader = CreateShader(source.VertexSource, source.FragmentSource);
+        GlCall(glUseProgram(shader));
+
+        // addint uniform to shader, this is how we can change the color
+        // location is the location of the uniform value in the shader
+        GlCall( int location = glGetUniformLocation(shader, "u_Color"));
+        ASSERT(location != -1);
+        GlCall(glUniform4f(location, 0.8f, 0.3f, 0.8f, 1.0f));
+    
+    
+        //unbind everything
+        GlCall(glBindVertexArray(0));
+        GlCall(glUseProgram(0));
+        GlCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
+        GlCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
+
+        float r = 0.0f;
+        float increment = 0.05f;
+
+        /* Loop until the user closes the window */
+        while (!glfwWindowShouldClose(window)){
+
+            GlCall(glClear(GL_COLOR_BUFFER_BIT));
+
+            // bind shader
+            GlCall(glUseProgram(shader));
+            // change color
+            GlCall(glUniform4f(location, r, 0.3f, 0.8f, 1.0f));
+
+            // bind vao and ibo
+            GlCall(glBindVertexArray(vao));
+            ib.Bind();
      
 
-        GlCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));
+            GlCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));
 
-        // change color
-        if (r > 1.0f)
-        {
-			increment = -0.05f;
-		}
-        else if (r < 0.0f)
-        {
-			increment = 0.05f;
-		}
-        r += increment;
+            // change color
+            if (r > 1.0f)
+            {
+			    increment = -0.05f;
+		    }
+            else if (r < 0.0f)
+            {
+			    increment = 0.05f;
+		    }
+            r += increment;
 
-        /* Swap front and back buffers */
-        GlCall(glfwSwapBuffers(window));
-        /* Poll for and process events */
-        GlCall(glfwPollEvents());
+            /* Swap front and back buffers */
+            GlCall(glfwSwapBuffers(window));
+            /* Poll for and process events */
+            GlCall(glfwPollEvents());
+        }
+
+        GlCall(glDeleteProgram(shader));
+
     }
-
-    GlCall(glDeleteProgram(shader));
 
     glfwTerminate();
     return 0;
