@@ -125,6 +125,12 @@ int main(void)
         return -1;
     }
 
+    //create context with core profile 
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    //no backwards compatibility
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
     /* Make the window's context current */
     glfwMakeContextCurrent(window);
 
@@ -152,32 +158,52 @@ int main(void)
         2, 3, 0
     };
 
+    // Vertex Array Object
+    unsigned int vao;
+    GlCall(glGenVertexArrays(1, &vao));
+    GlCall(glBindVertexArray(vao));
+
+
+    // Vertex Buffer Object
     unsigned int buffer;
     GlCall(glGenBuffers(1, &buffer));
     GlCall(glBindBuffer(GL_ARRAY_BUFFER, buffer));
-    GlCall(glBufferData(GL_ARRAY_BUFFER, 6*2 * sizeof(float), positions, GL_STATIC_DRAW));
+    GlCall(glBufferData(GL_ARRAY_BUFFER, 4*2 * sizeof(float), positions, GL_STATIC_DRAW));
+
 
     GlCall(glEnableVertexAttribArray(0));
+    // thil links the buffer to the vao
     GlCall(glVertexAttribPointer(0,  2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0));
 
+    // Index Buffer Object
     unsigned int ibo;
     GlCall(glGenBuffers(1, &ibo));
     GlCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo));
     GlCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned int), indices, GL_STATIC_DRAW));
 
+    // parcing shader code
     ShaderProgramSource source = ParseShader("res/shaders/Basic.shader");
     std::cout << "VERTEX" << std::endl;
     std::cout << source.VertexSource << std::endl;
     std::cout << "FRAGMENT" << std::endl;
     std::cout << source.FragmentSource << std::endl;
 
+    // creating shader
     unsigned int shader = CreateShader(source.VertexSource, source.FragmentSource);
     GlCall(glUseProgram(shader));
 
+
+    // addint uniform to shader, this is how we can change the color
+    // location is the location of the uniform value in the shader
     GlCall( int location = glGetUniformLocation(shader, "u_Color"));
     ASSERT(location != -1);
     GlCall(glUniform4f(location, 0.8f, 0.3f, 0.8f, 1.0f));
-
+    
+    
+    //unbind everything
+    GlCall(glUseProgram(0));
+    GlCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
+    GlCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
 
     float r = 0.0f;
     float increment = 0.05f;
@@ -187,10 +213,19 @@ int main(void)
 
         GlCall(glClear(GL_COLOR_BUFFER_BIT));
 
-
+        // bind shader
+        GlCall(glUseProgram(shader));
+        // change color
         GlCall(glUniform4f(location, r, 0.3f, 0.8f, 1.0f));
+
+        // bind vao and ibo
+        GlCall(glBindVertexArray(vao));
+        GlCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo));
+
+
         GlCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));
 
+        // change color
         if (r > 1.0f)
         {
 			increment = -0.05f;
