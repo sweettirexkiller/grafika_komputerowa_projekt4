@@ -91,6 +91,11 @@ static unsigned int CreateShader(const std::string& vertexShader, const std::str
 	return program;
 }
 
+void processInput(GLFWwindow* window)
+{
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, true);
+}
 
 int main(void)
 {
@@ -103,7 +108,7 @@ int main(void)
    
     /* Create a windowed mode window and its OpenGL context */
     window = glfwCreateWindow(640, 480, "Hello World", NULL, NULL);
-    if (!window)
+    if (!window) 
     {
         glfwTerminate();
         return -1;
@@ -117,7 +122,7 @@ int main(void)
 
     /* Make the window's context current */
     glfwMakeContextCurrent(window);
-
+     
     glfwSwapInterval(1);
 
 
@@ -128,8 +133,6 @@ int main(void)
 
     /* print opengl version and which driver is used */
     std::cout << glGetString(GL_VERSION) << std::endl;
-    
-    
     
     {
         float positions[] = {
@@ -185,6 +188,10 @@ int main(void)
         /* Loop until the user closes the window */
         while (!glfwWindowShouldClose(window)){
 
+            processInput(window);
+
+            GlCall(glClearColor(0.0f, 0.0f, 0.0f, 1.0f));
+
             GlCall(glClear(GL_COLOR_BUFFER_BIT));
 
             // bind shader
@@ -222,4 +229,4 @@ int main(void)
 
     glfwTerminate();
     return 0;
-}
+}  
