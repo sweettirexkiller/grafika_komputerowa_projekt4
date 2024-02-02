@@ -7,6 +7,9 @@
 #include "Renderer.h"
 #include "VertexBuffer.h"
 #include "IndexBuffer.h"
+#include "Shader.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 
 
 // struct for shader source code
@@ -135,17 +138,20 @@ int main(void)
     std::cout << glGetString(GL_VERSION) << std::endl;
     
     {
-        float positions[] = {
-		    -0.5f, -0.5f,
-		     0.5f, -0.5f,
-		     0.5f, 0.5f, 
-             -0.5f, 0.5f
-	    };
+        float vertices[] = {
+            // positions          // colors           // texture coords
+             0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,   // top right
+             0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,   // bottom right
+            -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,   // bottom left
+            -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f    // top left 
+        };
 
         unsigned int indices[] = {
             0, 1, 2,
-            2, 3, 0
+            1,2,3
         };
+
+      
 
         // Vertex Array Object
         unsigned int vao;
@@ -153,11 +159,16 @@ int main(void)
         GlCall(glBindVertexArray(vao));
 
         // Vertex Buffer Object
-        VertexBuffer vb(positions, 4 * 2 * sizeof(float));
+        VertexBuffer vb(vertices, 4 * 8 * sizeof(float));
 
         GlCall(glEnableVertexAttribArray(0));
-        // thil links the buffer to the vao
-        GlCall(glVertexAttribPointer(0,  2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0));
+        // position attribute
+        GlCall(glVertexAttribPointer(0,  3, GL_FLOAT, GL_FALSE, sizeof(float) * 8, 0));
+        GlCall(glEnableVertexAttribArray(0));
+        GlCall(glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 8, (const void*)(3 * sizeof(float))));
+        GlCall(glEnableVertexAttribArray(1));
+        GlCall(glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 8, (const void*)(6 * sizeof(float))));
+        GlCall(glEnableVertexAttribArray(2));
 
         // Index Buffer Object
         IndexBuffer ib(indices, 6);
@@ -167,14 +178,15 @@ int main(void)
 
         // creating shader
         unsigned int shader = CreateShader(source.VertexSource, source.FragmentSource);
-        GlCall(glUseProgram(shader));
+        Shader myShader = Shader(shader);
+        GlCall(myShader.use());
 
         // addint uniform to shader, this is how we can change the color
         // location is the location of the uniform value in the shader
-        GlCall( int location = glGetUniformLocation(shader, "u_Color"));
+       /* GlCall( int location = glGetUniformLocation(shader, "u_Color"));
         ASSERT(location != -1);
         GlCall(glUniform4f(location, 0.8f, 0.3f, 0.8f, 1.0f));
-    
+    */
     
         //unbind everything
         GlCall(glBindVertexArray(0));
@@ -182,8 +194,29 @@ int main(void)
         GlCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
         GlCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
 
-        float r = 0.0f;
-        float increment = 0.05f;
+
+
+        unsigned int texture;
+        glGenTextures(1, &texture);
+        glBindTexture(GL_TEXTURE_2D, texture);
+        // set the texture wrapping/filtering options (on the currently bound texture object)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        // load and generate the texture
+        int width, height, nrChannels;
+        unsigned char* data = stbi_load("res/textures/container.jpg", &width, &height, &nrChannels, 0);
+        if (data)
+        {
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+            glGenerateMipmap(GL_TEXTURE_2D);
+        }
+        else
+        {
+            std::cout << "Failed to load texture" << std::endl;
+        }
+        stbi_image_free(data);
 
         /* Loop until the user closes the window */
         while (!glfwWindowShouldClose(window)){
@@ -196,26 +229,17 @@ int main(void)
 
             // bind shader
             GlCall(glUseProgram(shader));
-            // change color
-            GlCall(glUniform4f(location, r, 0.3f, 0.8f, 1.0f));
 
             // bind vao and ibo
+          
+            glBindTexture(GL_TEXTURE_2D, texture);
+            glBindVertexArray(vao);
+
             GlCall(glBindVertexArray(vao));
             ib.Bind();
      
 
-            GlCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));
-
-            // change color
-            if (r > 1.0f)
-            {
-			    increment = -0.05f;
-		    }
-            else if (r < 0.0f)
-            {
-			    increment = 0.05f;
-		    }
-            r += increment;
+            GlCall(glDrawElements(GL_TRIANGLES, 6*2, GL_UNSIGNED_INT, nullptr));
 
             /* Swap front and back buffers */
             GlCall(glfwSwapBuffers(window));
