@@ -27,12 +27,16 @@
     <ClCompile Include="src\IndexBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Shader.cpp">
+    <ClCompile Include="src\OldApplication.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="res\shaders\Basic.shader" />
+    <None Include="res\shaders\1.color.vs" />
+    <None Include="res\shaders\1.color.fs" />
+    <None Include="res\shaders\1.light_cube.vs" />
+    <None Include="res\shaders\1.light_cube.fs" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Renderer.h">
