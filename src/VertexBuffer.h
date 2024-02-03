@@ -11,4 +11,6 @@ class VertexBuffer
 
 		void Bind() const;
 		void Unbind() const;
+		// id getter
+		int getID() const;
 };

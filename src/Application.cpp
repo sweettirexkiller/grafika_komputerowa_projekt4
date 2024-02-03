@@ -14,6 +14,7 @@
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
 #include "Application.h"
+#include "Camera.h"
 
 
 // settings
@@ -124,9 +125,6 @@ void processInput(GLFWwindow* window)
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
-    
-    
-
     float cameraSpeed = 2.5f * deltaTime;
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
         cameraPos += cameraSpeed * cameraFront;
@@ -139,8 +137,6 @@ void processInput(GLFWwindow* window)
 
 
 }
-
-
 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 {
@@ -179,8 +175,7 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 	front.y = sin(glm::radians(pitch));
 	front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
 	cameraFront = glm::normalize(front);
-}   
-
+}
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
@@ -191,9 +186,6 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
         fov = 45.0f;
 }
 
-
-
-
 int main(void)
 {
     GLFWwindow* window;
@@ -201,7 +193,6 @@ int main(void)
     /* Initialize the library */
     if (!glfwInit())
         return -1;
-
    
     /* Create a windowed mode window and its OpenGL context */
     window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Learn openGL", NULL, NULL);
@@ -292,9 +283,6 @@ int main(void)
            glm::vec3(-1.3f,  1.0f, -1.5f)
         };
 
-        
-      
-
         // Vertex Array Object
         unsigned int vao;
         GlCall(glGenVertexArrays(1, &vao));
@@ -311,10 +299,16 @@ int main(void)
         GlCall(glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float))));
         GlCall(glEnableVertexAttribArray(1));
 
+        // lighting vertex array object
+        unsigned int lightVao;
+        GlCall(glGenVertexArrays(1, &lightVao));
+        GlCall(glBindVertexArray(lightVao));
+        glBindBuffer(GL_ARRAY_BUFFER,vb.getID());
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
 
         // parcing shader code
         ShaderProgramSource source = ParseShader("res/shaders/Basic.shader");
-
 
         // load and create a texture 
         // -------------------------
@@ -366,29 +360,21 @@ int main(void)
         {
             std::cout << "Failed to load texture" << std::endl;
         }
-        stbi_image_free(data);
-      
-
-       
-
+        stbi_image_free(data);        
 
         // target at 0,0,0
 
         glm::mat4 view;
         view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
 
-
         const float radius = 10.0f;
-
 
         // perspective projection
 
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::rotate(model, glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f));
         glm::mat4 projection;
-        projection = glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 0.1f, 100.0f);
-
-       
+        projection = glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 0.1f, 100.0f);       
 
         // creating shader
         unsigned int shader = CreateShader(source.VertexSource, source.FragmentSource);
@@ -407,7 +393,6 @@ int main(void)
         glUniform1i(glGetUniformLocation(myShader.ID, "texture1"), 0); // set it manually
         myShader.setInt("texture2", 1); // or with shader class
 
-    
         //unbind everything
         GlCall(glBindVertexArray(0));
         GlCall(glUseProgram(0));
@@ -419,7 +404,6 @@ int main(void)
         /* Loop until the user closes the window */
         while (!glfwWindowShouldClose(window)){
 
-
             // per-frame time logic
             // --------------------
             float currentFrame = static_cast<float>(glfwGetTime());
@@ -427,9 +411,6 @@ int main(void)
             lastFrame = currentFrame;
 
             processInput(window);
-
-
-           
 
             GlCall(glClearColor(0.0f, 0.0f, 0.0f, 1.0f));
 
@@ -442,7 +423,6 @@ int main(void)
 
             // bind shader
             GlCall(myShader.use());
-
 
             // create transformations
             //glm::mat4 view = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
