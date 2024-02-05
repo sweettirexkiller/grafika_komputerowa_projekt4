@@ -79,7 +79,7 @@ int main()
     Shader lightingShader("res/shaders/1.color.vs", "res/shaders/1.color.fs");
     Shader lightCubeShader("res/shaders/1.light_cube.vs", "res/shaders/1.light_cube.fs");
 
-    Shader modelShader("1.model_loading.vs", "1.model_loading.fs");
+    Shader modelShader("res/shaders/1.model_loading.vs", "res/shaders/1.model_loading.fs");
 
     // set up vertex data (and buffer(s)) and configure vertex attributes
     // ------------------------------------------------------------------
@@ -201,7 +201,8 @@ int main()
 
 
 
-    Model ourModel((string)"res/models/backpack/backpack.obj");
+    Model ourModel((string)"res/models/house/house.obj");
+    Model wolfModel((string)"res/models/Wolf/Wolf.obj");
 
 
     // render loop
@@ -330,6 +331,7 @@ int main()
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
 
+
         // don't forget to enable shader before setting uniforms
         modelShader.use();
         modelShader.setMat4("projection", projection);
@@ -337,11 +339,19 @@ int main()
 
         // render the loaded model
         glm::mat4 model1 = glm::mat4(1.0f);
-        model1 = glm::translate(model1, glm::vec3(0.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
-        model1 = glm::scale(model1, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
+        model1 = glm::translate(model1, glm::vec3(3.0f, 3.0f, 0.0f)); // translate it down so it's at the center of the scene
+        model1 = glm::scale(model1, glm::vec3(0.5f, 0.5f, 0.5f));	// it's a bit too big for our scene, so scale it down
         modelShader.setMat4("model", model1);
         ourModel.Draw(modelShader);
 
+
+        glm::mat4 model2 = glm::mat4(1.0f);
+        model2 = glm::translate(model2, glm::vec3(-3.0f, -3.0f, 0.0f)); // translate it down so it's at the center of the scene
+        model2 = glm::scale(model1, glm::vec3(0.5f, 0.5f, 0.5f));	// it's a bit too big for our scene, so scale it down
+        modelShader.setMat4("model", model1);
+        wolfModel.Draw(modelShader);
+
+       
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
         glfwSwapBuffers(window);
