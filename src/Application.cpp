@@ -6,6 +6,18 @@
 #include "stb_image.h"
 #include "glm/ext/matrix_clip_space.hpp"
 #include "Model.h"
+#include "ElasticSurface.h"
+#include "DynamicSurface.h"
+#include <array>
+#include "glm/gtc/type_ptr.hpp"
+#include "Light.h"
+
+
+struct LightLocation {
+    std::array<unsigned int, 8> colorLoc;
+    std::array<unsigned int, 8> positionLoc;
+    std::array<unsigned int, 8> strengthLoc;
+};
 
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -19,7 +31,17 @@ const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 
 // camera
-Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
+
+// -12.3466 6.20065 -9.64131
+Camera camera1(glm::vec3(-12.3466f, 6.20065f, 9.64131f));
+// set camera1 front to 0.692428 -0.194234 -0.69485
+
+//4.38145 5.17894 5.65585
+Camera camera2(glm::vec3(4.38145f, 5.17894f, 5.65585f));
+// 0.457383 4.10636 -3.45622
+Camera camera3(glm::vec3(0.457383f, 4.10636f, 3.45622f));
+
+Camera* currentCamera = &camera1;
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
@@ -31,8 +53,38 @@ float lastFrame = 0.0f;
 // lighting
 glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
 
+
+
+
+//enum ShaderType
+//{
+//    LIGHTING,
+//    FOG,
+//    PHONG,
+//    GOURAUD,
+//    FLAT,
+//    SPOTLIGHT
+//};
+//
+//ShaderType currentShader = LIGHTING;
+
+
+struct ShaderLocation {
+    unsigned int standard, toon, particle, curve, surface;
+};
+
+
 int main()
 {
+
+    camera1.SetFront(glm::vec3(0.692428f, -0.194234f, -0.69485f));
+    camera1.isMoving = false;
+    // -0.596873 -0.328867 -0.73184
+    camera2.SetFront(glm::vec3(-0.596873f, 0.328867f, 0.73184f));
+    camera3.isFollowing = true;
+    camera3.isMoving = true;
+
+      
     // glfw: initialize and configure
     // ------------------------------
     glfwInit();
@@ -81,6 +133,62 @@ int main()
 
     Shader modelShader("res/shaders/1.model_loading.vs", "res/shaders/1.model_loading.fs");
 
+
+    // surface Shader
+
+    std::vector<glm::vec3> corners = { {
+        glm::vec3(-1.0f,3.0f,3.0f),
+        glm::vec3(1.0f,1.0f,3.0f),
+    } };
+    ElasticSurface* surface = new ElasticSurface(corners, glm::vec3(0.5, 0.25, 0.5));
+
+    unsigned int surfaceShader;
+    util::shaderFilePathBundle filepaths;
+    filepaths.vertex = "res/shaders/Surface.vs";
+    filepaths.geometry = NULL;
+    filepaths.tcs = "res/shaders/Surface.tcs";
+    filepaths.tes = "res/shaders/Surface.tes";
+    filepaths.fragment = "res/shaders/Surface.fs";
+    surfaceShader = util::load_shader(filepaths);
+    ShaderLocation SLcameraPos, SLmodel, SLview, SLprojection, SLtint;
+    LightLocation lights, toonLights, surfaceLights;
+    DynamicSurface* surfaceMesh = new DynamicSurface();
+
+
+    glUseProgram(surfaceShader);
+    SLmodel.surface = glGetUniformLocation(surfaceShader, "model");
+    SLview.surface = glGetUniformLocation(surfaceShader, "view");
+    SLprojection.surface = glGetUniformLocation(surfaceShader, "projection");
+    SLtint.surface = glGetUniformLocation(surfaceShader, "tint");
+    std::stringstream location;
+    for (int i = 0; i < 8; i++) {
+        location.str("");
+        location << "lights[" << i << "].color";
+        surfaceLights.colorLoc[i] = glGetUniformLocation(surfaceShader, location.str().c_str());
+        location.str("");
+        location << "lights[" << i << "].position";
+        surfaceLights.positionLoc[i] = glGetUniformLocation(surfaceShader, location.str().c_str());
+        location.str("");
+        location << "lights[" << i << "].strength";
+        surfaceLights.strengthLoc[i] = glGetUniformLocation(surfaceShader, location.str().c_str());
+    }
+    
+
+    std::vector<Light*> lightsArray;
+
+
+    LightCreateInfo lightInfo;
+    lightInfo.color = glm::vec3(1, 0, 0);
+    lightInfo.position = glm::vec3(1, 0, 0);
+    lightInfo.strength = 4.0f;
+    lightsArray.push_back(new Light(&lightInfo));
+    lightInfo.color = glm::vec3(0, 1, 0);
+    lightInfo.position = glm::vec3(3, 2, 0);
+    lightsArray.push_back(new Light(&lightInfo));
+    lightInfo.color = glm::vec3(0, 1, 1);
+    lightInfo.position = glm::vec3(3, 0, 2);
+    lightsArray.push_back(new Light(&lightInfo));
+   
     // set up vertex data (and buffer(s)) and configure vertex attributes
     // ------------------------------------------------------------------
     float vertices[] = {
@@ -199,11 +307,14 @@ int main()
     lightingShader.setInt("material.diffuse", 0);
     lightingShader.setInt("material.specular", 1);
 
-
-
     Model ourModel((string)"res/models/house/house.obj");
     Model wolfModel((string)"res/models/Wolf/Wolf.obj");
 
+
+  
+
+    
+    //glm::vec3 fogColor = glm::vec3(0.8, 0.8, 0.8); // Kolor mg³y
 
     // render loop
     // -----------
@@ -219,6 +330,11 @@ int main()
         // -----
         processInput(window);
 
+        // display camera position
+        cout << "Camera position: " << currentCamera->Position.x << " " << currentCamera->Position.y << " " << currentCamera->Position.z << endl;
+        // display camera direction
+        cout << "Camera direction: " << currentCamera->Front.x << " " << currentCamera->Front.y << " " << currentCamera->Front.z << endl;
+
         // render
         // ------
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -226,7 +342,7 @@ int main()
 
         // be sure to activate shader when setting uniforms/drawing objects
         lightingShader.use();
-        lightingShader.setVec3("viewPos", camera.Position);
+        lightingShader.setVec3("viewPos", currentCamera->Position);
         lightingShader.setFloat("material.shininess", 32.0f);
 
         /*
@@ -273,8 +389,8 @@ int main()
         lightingShader.setFloat("pointLights[3].linear", 0.09f);
         lightingShader.setFloat("pointLights[3].quadratic", 0.032f);
         // spotLight
-        lightingShader.setVec3("spotLight.position", camera.Position);
-        lightingShader.setVec3("spotLight.direction", camera.Front);
+        lightingShader.setVec3("spotLight.position", currentCamera->Position);
+        lightingShader.setVec3("spotLight.direction", currentCamera->Front);
         lightingShader.setVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
         lightingShader.setVec3("spotLight.diffuse", 1.0f, 1.0f, 1.0f);
         lightingShader.setVec3("spotLight.specular", 1.0f, 1.0f, 1.0f);
@@ -285,8 +401,8 @@ int main()
         lightingShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(15.0f)));
 
         // view/projection transformations
-        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-        glm::mat4 view = camera.GetViewMatrix();
+        glm::mat4 projection = glm::perspective(glm::radians(currentCamera->Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+        glm::mat4 view = currentCamera->GetViewMatrix();
         lightingShader.setMat4("projection", projection);
         lightingShader.setMat4("view", view);
 
@@ -308,8 +424,12 @@ int main()
             // calculate the model matrix for each object and pass it to shader before drawing
             glm::mat4 model = glm::mat4(1.0f);
             model = glm::translate(model, cubePositions[i]);
+
+            // rotate models in time 
+            model = glm::rotate(model, (float)glfwGetTime() * glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));
+
             float angle = 20.0f * i;
-            model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+           // model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
             lightingShader.setMat4("model", model);
 
             glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -345,13 +465,72 @@ int main()
         ourModel.Draw(modelShader);
 
 
-        glm::mat4 model2 = glm::mat4(1.0f);
-        model2 = glm::translate(model2, glm::vec3(-3.0f, -3.0f, 0.0f)); // translate it down so it's at the center of the scene
-        model2 = glm::scale(model1, glm::vec3(0.5f, 0.5f, 0.5f));	// it's a bit too big for our scene, so scale it down
-        modelShader.setMat4("model", model1);
+     
+        // center of the house is at 3,3,0
+        // make the wolf cirlce around the house
+
+          // Upadting cameras:
+        float radius = 12.0f;
+        float wolf_x = static_cast<float>(3 + sin(glfwGetTime()) * radius);
+        float wolf_y = static_cast<float>(0);
+        float wolf_z = static_cast<float>(cos(glfwGetTime()) * radius);
+
+        glm::mat4 model3 = glm::mat4(1.0f);
+      
+        //model3 = glm::rotate(model3, (float)glfwGetTime() * glm::radians(50.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        model3 = glm::scale(model1, glm::vec3(0.5f, 0.5f, 0.5f));	// it's a bit too big for our scene, so scale it down
+        model3 = glm::translate(model3, glm::vec3(wolf_x, wolf_y, wolf_z)); // translate it down so it's at the center of the scene
+        model3 = glm::rotate(model3, (float)glfwGetTime() * glm::radians(50.f), glm::vec3(0.0f, 1.0f, 0.0f));
+        if (currentCamera->isFollowing) {
+            currentCamera->Position = glm::vec3(wolf_x, wolf_y + 1, wolf_z);
+            currentCamera->Front = glm::vec3(3 - wolf_x,wolf_y, 0 - wolf_z);
+        }
+            
+
+        modelShader.setMat4("model", model3);
         wolfModel.Draw(modelShader);
 
-       
+
+        // render surface
+      
+        glUseProgram(surfaceShader);
+        glPatchParameteri(GL_PATCH_VERTICES, 16);
+        glDisable(GL_CULL_FACE);
+
+        glUniformMatrix4fv(
+            SLprojection.surface,
+            1, GL_FALSE, glm::value_ptr(projection)
+        );
+        glUniform1f(glGetUniformLocation(surfaceShader, "detail"), 40);
+
+        // loog through all pointLightPositions
+        
+        
+        glm::vec3 lightColor;
+        lightColor.x = sin(glfwGetTime() * 2.0f);
+        lightColor.y = sin(glfwGetTime() * 0.7f);
+        lightColor.z = sin(glfwGetTime() * 1.3f);
+  
+        for (int i = 0; i < 4; i ++) {
+            glUniform3fv(surfaceLights.colorLoc[i], 1, glm::value_ptr(lightColor));
+            glUniform3fv(surfaceLights.positionLoc[i], 1, glm::value_ptr(pointLightPositions[i]));
+            glUniform1f(surfaceLights.strengthLoc[i], 1.0f);
+        }
+
+        glUniformMatrix4fv(SLview.surface, 1, GL_FALSE,
+            glm::value_ptr(view)
+        );
+
+        glUniformMatrix4fv(SLmodel.surface, 1, GL_FALSE,
+            glm::value_ptr(glm::mat4(1.0))
+        );
+        glUniform3fv(SLtint.surface, 1, glm::value_ptr(surface->color));
+
+        surface->Update(currentFrame/256.0f);
+        surfaceMesh->build(surface->controlPoints);
+        glBindVertexArray(surfaceMesh->VAO);
+        glDrawArrays(GL_PATCHES, 0, 16);
+
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
         glfwSwapBuffers(window);
@@ -363,6 +542,7 @@ int main()
     glDeleteVertexArrays(1, &cubeVAO);
     glDeleteVertexArrays(1, &lightCubeVAO);
     glDeleteBuffers(1, &VBO);
+    glDeleteProgram(surfaceShader);
 
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------
@@ -378,13 +558,20 @@ void processInput(GLFWwindow* window)
         glfwSetWindowShouldClose(window, true);
 
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        camera.ProcessKeyboard(FORWARD, deltaTime);
+        currentCamera->ProcessKeyboard(FORWARD, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        camera.ProcessKeyboard(BACKWARD, deltaTime);
+        currentCamera->ProcessKeyboard(BACKWARD, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        camera.ProcessKeyboard(LEFT, deltaTime);
+        currentCamera->ProcessKeyboard(LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        camera.ProcessKeyboard(RIGHT, deltaTime);
+        currentCamera->ProcessKeyboard(RIGHT, deltaTime);
+
+    if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
+        currentCamera = &camera1;
+    else if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
+        currentCamera = &camera2;
+    else if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS)
+        currentCamera = &camera3;
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -417,14 +604,14 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
     lastX = xpos;
     lastY = ypos;
 
-    camera.ProcessMouseMovement(xoffset, yoffset);
+    currentCamera->ProcessMouseMovement(xoffset, yoffset);
 }
 
 // glfw: whenever the mouse scroll wheel scrolls, this callback is called
 // ----------------------------------------------------------------------
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
-    camera.ProcessMouseScroll(static_cast<float>(yoffset));
+    currentCamera->ProcessMouseScroll(static_cast<float>(yoffset));
 }
 
 // utility function for loading a 2D texture from file

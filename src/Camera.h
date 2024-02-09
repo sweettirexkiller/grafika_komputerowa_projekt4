@@ -40,6 +40,9 @@ public:
     float MouseSensitivity;
     float Zoom;
 
+    bool isMoving = true;
+    bool isFollowing = false;
+
     // constructor with vectors
     Camera(glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), float yaw = YAW, float pitch = PITCH) : Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM)
     {
@@ -65,9 +68,20 @@ public:
         return glm::lookAt(Position, Position + Front, Up);
     }
 
+    // Front vector setter
+    void SetFront(glm::vec3 front) {
+		Front = front;
+	}
+
+    // isMoving setter
+    void SetIsMoving(bool _isMoving) {
+        isMoving = _isMoving;
+    }
+
     // processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)
     void ProcessKeyboard(Camera_Movement direction, float deltaTime)
     {
+        if(isMoving == false || isFollowing == true) return;
         float velocity = MovementSpeed * deltaTime;
         if (direction == FORWARD)
             Position += Front * velocity;
@@ -82,6 +96,8 @@ public:
     // processes input received from a mouse input system. Expects the offset value in both the x and y direction.
     void ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch = true)
     {
+        if(isMoving == false || isFollowing == true) return;
+        
         xoffset *= MouseSensitivity;
         yoffset *= MouseSensitivity;
 
